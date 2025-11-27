@@ -13,3 +13,9 @@ def draw_point(x, y):
 
 def erase_point(x, y):
     cv2.circle(canvas, (x, y), erase_thickness, (0, 0, 0), -1)
+
+def spray(x, y):
+    for i in range(20):
+        dx = np.random.randint(-20, 20)
+        dy = np.random.randint(-20, 20)
+        cv2.circle(canvas, (x + dx, y + dy), 2, current_color, -1)
