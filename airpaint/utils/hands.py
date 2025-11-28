@@ -26,7 +26,7 @@ def process_hands(frame, w, h):
 
             hand_label = results.multi_handedness[idx].classification[0].label
 
-            if hand_label == "Left":
+            if hand_label == "Right":
                 left_lm = lm
                 left_pos = (x, y)
             else:
@@ -34,5 +34,10 @@ def process_hands(frame, w, h):
                 right_pos = (x, y)
 
             mp_draw.draw_landmarks(frame, handLms, mp_hands.HAND_CONNECTIONS)
+    
+    if left_pos and right_pos:
+        if left_pos[0] > right_pos[0]:   # se foram trocadas
+            left_lm, right_lm = right_lm, left_lm
+            left_pos, right_pos = right_pos, left_pos
 
     return frame, left_lm, right_lm, left_pos, right_pos
