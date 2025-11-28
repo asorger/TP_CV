@@ -1,9 +1,16 @@
 import cv2
 import numpy as np
 
-from gestures import *
+from gestures import (
+    one_finger,
+    pinch,
+    three_fingers,
+    two_fingers,
+    is_fist,
+    four_fingers,
+)
 from hands import process_hands
-from drawing import *
+from drawing import ensure_canvas, erase_point, draw_point, spray
 import config as cfg
 
 cap = cv2.VideoCapture(0)
@@ -54,7 +61,7 @@ while True:
 
     cv2.imshow("AirPaint — Modular", output)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 cap.release()
