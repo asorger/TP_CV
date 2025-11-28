@@ -1,4 +1,5 @@
 import mediapipe as mp
+import cv2
 
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
@@ -9,8 +10,9 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.6
 )
 
-def process_hands(frame, w, h):
-    rgb = frame[:, :, ::-1]
+def detect_hands(frame):
+    h, w, _ = frame.shape
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb)
 
     left_lm = None

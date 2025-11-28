@@ -3,7 +3,7 @@ import numpy as np
 canvas = None
 
 thickness = 10
-erase_thickness = 20
+erase_thickness = 40
 
 colors = [
     (0, 255, 0),   
