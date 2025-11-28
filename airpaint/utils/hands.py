@@ -1,4 +1,5 @@
 import mediapipe as mp
+import cv2
 
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
@@ -9,8 +10,9 @@ hands = mp_hands.Hands(
     min_tracking_confidence=0.6
 )
 
-def process_hands(frame, w, h):
-    rgb = frame[:, :, ::-1]
+def detect_hands(frame):
+    h, w, _ = frame.shape
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb)
 
     left_lm = None
@@ -26,7 +28,7 @@ def process_hands(frame, w, h):
 
             hand_label = results.multi_handedness[idx].classification[0].label
 
-            if hand_label == "Right":
+            if hand_label == "Left":
                 left_lm = lm
                 left_pos = (x, y)
             else:
@@ -34,10 +36,5 @@ def process_hands(frame, w, h):
                 right_pos = (x, y)
 
             mp_draw.draw_landmarks(frame, handLms, mp_hands.HAND_CONNECTIONS)
-    
-    if left_pos and right_pos:
-        if left_pos[0] > right_pos[0]:   # se foram trocadas
-            left_lm, right_lm = right_lm, left_lm
-            left_pos, right_pos = right_pos, left_pos
 
     return frame, left_lm, right_lm, left_pos, right_pos
