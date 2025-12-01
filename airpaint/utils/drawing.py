@@ -18,3 +18,10 @@ def spray_at(x, y):
         dx = np.random.randint(-20, 20)
         dy = np.random.randint(-20, 20)
         cv2.circle(cfg.canvas, (x + dx, y + dy), 2, cfg.current_color, -1)
+        
+def clear_canvas():
+    cfg.canvas[:] = 0
+
+def undo():
+    if cfg.history:
+        cfg.canvas[:] = cfg.history.pop().copy()
