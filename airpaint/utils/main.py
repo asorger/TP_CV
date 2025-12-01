@@ -11,6 +11,8 @@ from gestures import (
 )
 from hands import detect_hands
 from drawing import ensure_canvas, draw_brush, erase_at, spray_at
+from drawing import clear_canvas, undo
+from pose import detect_pose        
 
 cap = cv2.VideoCapture(0)
 
@@ -21,12 +23,13 @@ while True:
 
     frame = cv2.flip(frame, 1)
     h, w, _ = frame.shape
+    right_up, left_up = detect_pose(frame)
 
     ensure_canvas(h, w)
 
     frame, left_lm, right_lm, left_pos, right_pos = detect_hands(frame)
 
-    # ================= MÃO ESQUERDA (Ferramentas) =================
+    #MAO ESQUERDA
     if left_lm:
         if one_finger(left_lm):
             cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
@@ -43,6 +46,7 @@ while True:
         if two_fingers(left_lm):
             cfg.thickness = max(2, cfg.thickness - 1)
 
+    #MAO DIREITA
     if right_lm and right_pos:
         x, y = right_pos
 
@@ -50,14 +54,23 @@ while True:
             erase_at(x, y)
 
         elif pinch(right_lm):
+            cfg.save_state(cfg.canvas)
+
             if cfg.spray_mode:
                 spray_at(x, y)
             else:
                 draw_brush(x, y)
 
+    if right_up:
+        clear_canvas()
+
+    if left_up:
+        undo()
+
     output = cv2.add(frame, cfg.canvas)
 
     cv2.imshow("AirPaint 3D — Versao Modular", output)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
