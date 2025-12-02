@@ -1,4 +1,5 @@
 import cv2
+import time
 
 import config as cfg
 from gestures import (
@@ -13,6 +14,10 @@ from hands import detect_hands
 from drawing import ensure_canvas, draw_brush, erase_at, spray_at
 from drawing import clear_canvas, undo
 from pose import detect_pose        
+
+right_arm_start = None
+left_arm_start = None
+ARM_HOLD_TIME = 4
 
 cap = cv2.VideoCapture(0)
 
@@ -29,7 +34,7 @@ while True:
 
     frame, left_lm, right_lm, left_pos, right_pos = detect_hands(frame)
 
-    #MAO ESQUERDA
+    # MAO ESQUERDA
     if left_lm:
         if one_finger(left_lm):
             cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
@@ -46,7 +51,7 @@ while True:
         if two_fingers(left_lm):
             cfg.thickness = max(2, cfg.thickness - 1)
 
-    #MAO DIREITA
+    # MAO DIREITA
     if right_lm and right_pos:
         x, y = right_pos
 
@@ -62,10 +67,26 @@ while True:
                 draw_brush(x, y)
 
     if right_up:
-        clear_canvas()
+        if right_arm_start is None:
+            right_arm_start = time.time()
+        else:
+            elapsed = time.time() - right_arm_start
+            if elapsed >= ARM_HOLD_TIME:
+                clear_canvas()
+                right_arm_start = None
+    else:
+        right_arm_start = None 
 
     if left_up:
-        undo()
+        if left_arm_start is None:
+            left_arm_start = time.time()
+        else:
+            elapsed = time.time() - left_arm_start
+            if elapsed >= ARM_HOLD_TIME:
+                undo()
+                left_arm_start = None
+    else:
+        left_arm_start = None
 
     output = cv2.add(frame, cfg.canvas)
 
