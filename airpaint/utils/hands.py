@@ -31,10 +31,22 @@ def detect_hands(frame):
             if hand_label == "Left":
                 left_lm = lm
                 left_pos = (x, y)
+                mp_draw.draw_landmarks(
+                    frame,
+                    handLms,
+                    mp_hands.HAND_CONNECTIONS,
+                    mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=3),
+                    mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)
+                )
             else:
                 right_lm = lm
                 right_pos = (x, y)
-
-            mp_draw.draw_landmarks(frame, handLms, mp_hands.HAND_CONNECTIONS)
+                mp_draw.draw_landmarks(
+                    frame,
+                    handLms,
+                    mp_hands.HAND_CONNECTIONS,
+                    mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=3),
+                    mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2)
+                )
 
     return frame, left_lm, right_lm, left_pos, right_pos
