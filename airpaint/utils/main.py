@@ -29,6 +29,9 @@ ARM_HOLD_TIME = 4
 select_start = None
 selected_index = None
 
+last_color_change = 0
+COLOR_DELAY = 1.5
+
 cap = cv2.VideoCapture(0)
 
 while True:
@@ -53,7 +56,7 @@ while True:
                 selected_index = idx
                 select_start = time.time()
             else:
-                if time.time() - select_start >= 0.6:
+                if time.time() - select_start >= 1.8:
                     cfg.current_color = cfg.colors[idx]
         else:
             selected_index = None
@@ -61,8 +64,11 @@ while True:
 
     if left_lm:
         if one_finger(left_lm):
-            cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
-            cfg.current_color = cfg.colors[cfg.color_index]
+            now = time.time()
+            if now - last_color_change >= COLOR_DELAY:
+                cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
+                cfg.current_color = cfg.colors[cfg.color_index]
+                last_color_change = now
 
         if pinch(left_lm):
             cfg.spray_mode = True
