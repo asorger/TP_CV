@@ -8,16 +8,29 @@ from gestures import (
     three_fingers,
     four_fingers,
     pinch,
-    is_fist
+    is_fist,
 )
 from hands import detect_hands
-from drawing import ensure_canvas, draw_brush, erase_at, spray_at
+from drawing import (
+    ensure_canvas,
+    draw_brush,
+    erase_at,
+    spray_at,
+    draw_palette,
+    check_palette_selection,
+)
 from drawing import clear_canvas, undo
-from pose import detect_pose        
+from pose import detect_pose
 
 right_arm_start = None
 left_arm_start = None
 ARM_HOLD_TIME = 4
+
+select_start = None
+selected_index = None
+
+last_color_change = 0
+COLOR_DELAY = 0.6
 
 cap = cv2.VideoCapture(0)
 
@@ -34,11 +47,28 @@ while True:
 
     frame, left_lm, right_lm, left_pos, right_pos = detect_hands(frame)
 
-    # MAO ESQUERDA
+    draw_palette(frame)
+
+    if left_pos:
+        idx = check_palette_selection(left_pos[0], left_pos[1], h)
+        if idx is not None:
+            if selected_index != idx:
+                selected_index = idx
+                select_start = time.time()
+            else:
+                if time.time() - select_start >= 1.8:
+                    cfg.current_color = cfg.colors[idx]
+        else:
+            selected_index = None
+            select_start = None
+
     if left_lm:
         if one_finger(left_lm):
-            cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
-            cfg.current_color = cfg.colors[cfg.color_index]
+            now = time.time()
+            if now - last_color_change >= COLOR_DELAY:
+                cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
+                cfg.current_color = cfg.colors[cfg.color_index]
+                last_color_change = now
 
         if pinch(left_lm):
             cfg.spray_mode = True
@@ -51,7 +81,6 @@ while True:
         if two_fingers(left_lm):
             cfg.thickness = max(2, cfg.thickness - 1)
 
-    # MAO DIREITA
     if right_lm and right_pos:
         x, y = right_pos
 
@@ -75,7 +104,7 @@ while True:
                 clear_canvas()
                 right_arm_start = None
     else:
-        right_arm_start = None 
+        right_arm_start = None
 
     if left_up:
         if left_arm_start is None:
@@ -92,7 +121,7 @@ while True:
 
     cv2.imshow("AirPaint 3D — Versao Modular", output)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 cap.release()
