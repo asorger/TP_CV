@@ -16,6 +16,7 @@ from drawing import ensure_canvas, draw_brush, erase_at, spray_at, draw_palette,
 from drawing import clear_canvas, undo
 from pose import detect_pose       
 from yolo_detector import detect_phone
+from face import detect_smile
 
 right_arm_start = None
 left_arm_start = None
@@ -50,6 +51,20 @@ while True:
 
     draw_palette(frame)
 
+    smiling = detect_smile(frame)
+
+    if smiling:
+        cfg.rainbow_mode = True
+    else:
+        cfg.rainbow_mode = False
+
+    if cfg.rainbow_mode:
+        now = time.time()
+        if now - cfg.last_rainbow_switch >= cfg.rainbow_delay:
+            cfg.color_index = (cfg.color_index + 1) % len(cfg.colors)
+            cfg.current_color = cfg.colors[cfg.color_index]
+            cfg.last_rainbow_switch = now
+
     if left_pos:
         idx = check_palette_selection(left_pos[0], left_pos[1], h)
         if idx is not None:
@@ -63,7 +78,7 @@ while True:
             selected_index = None
             select_start = None
 
-    if left_lm:
+    if left_lm and not cfg.rainbow_mode:
         if one_finger(left_lm):
             now = time.time()
             if now - last_color_change >= COLOR_DELAY:
