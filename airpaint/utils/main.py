@@ -1,5 +1,6 @@
 import cv2
 import time
+import os
 
 import config as cfg
 from gestures import (
@@ -8,19 +9,13 @@ from gestures import (
     three_fingers,
     four_fingers,
     pinch,
-    is_fist,
+    is_fist
 )
 from hands import detect_hands
-from drawing import (
-    ensure_canvas,
-    draw_brush,
-    erase_at,
-    spray_at,
-    draw_palette,
-    check_palette_selection,
-)
+from drawing import ensure_canvas, draw_brush, erase_at, spray_at, draw_palette, check_palette_selection
 from drawing import clear_canvas, undo
-from pose import detect_pose
+from pose import detect_pose       
+from yolo_detector import detect_phone
 
 right_arm_start = None
 left_arm_start = None
@@ -31,6 +26,12 @@ selected_index = None
 
 last_color_change = 0
 COLOR_DELAY = 0.6
+
+phone_start = None
+PHONE_HOLD_TIME = 3
+
+if not os.path.exists("screenshots"):
+    os.makedirs("screenshots")
 
 cap = cv2.VideoCapture(0)
 
@@ -95,6 +96,22 @@ while True:
             else:
                 draw_brush(x, y)
 
+    phone_detected = detect_phone(frame)
+
+    if phone_detected:
+        if phone_start is None:
+            phone_start = time.time()
+        else:
+            if time.time() - phone_start >= PHONE_HOLD_TIME:
+                filename = f"screenshots/airpaint_{int(time.time())}.png"
+                output = cv2.add(frame, cfg.canvas)
+                cv2.imwrite(filename, output)
+
+                print("Screenshot salva:", filename)
+                phone_start = None
+    else:
+        phone_start = None
+
     if right_up:
         if right_arm_start is None:
             right_arm_start = time.time()
@@ -104,7 +121,7 @@ while True:
                 clear_canvas()
                 right_arm_start = None
     else:
-        right_arm_start = None
+        right_arm_start = None 
 
     if left_up:
         if left_arm_start is None:
@@ -121,7 +138,7 @@ while True:
 
     cv2.imshow("AirPaint 3D — Versao Modular", output)
 
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
