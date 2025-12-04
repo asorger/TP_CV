@@ -35,6 +35,10 @@ current_color = colors[color_index]
 
 spray_mode = False
 
+rainbow_mode = False
+rainbow_delay = 0.25    
+last_rainbow_switch = 0
+
 def save_state(canvas):
     if len(history) >= MAX_HISTORY:
         history.pop(0)
