@@ -15,7 +15,7 @@ from hands import detect_hands
 from drawing import ensure_canvas, draw_brush, erase_at, spray_at, draw_palette, check_palette_selection
 from drawing import clear_canvas, undo
 from pose import detect_pose       
-from yolo_detector import detect_phone
+from yolo_detector import detect_book
 from face import detect_smile
 
 right_arm_start = None
@@ -28,8 +28,8 @@ selected_index = None
 last_color_change = 0
 COLOR_DELAY = 0.6
 
-phone_start = None
-PHONE_HOLD_TIME = 3
+book_start = None
+BOOK_HOLD_TIME = 3
 
 if not os.path.exists("screenshots"):
     os.makedirs("screenshots")
@@ -42,7 +42,9 @@ while True:
         break
 
     frame = cv2.flip(frame, 1)
+    raw_frame = frame.copy()
     h, w, _ = frame.shape
+
     right_up, left_up = detect_pose(frame)
 
     ensure_canvas(h, w)
@@ -111,21 +113,28 @@ while True:
             else:
                 draw_brush(x, y)
 
-    phone_detected = detect_phone(frame)
+    book_detected = detect_book(raw_frame)
 
-    if phone_detected:
-        if phone_start is None:
-            phone_start = time.time()
+    if book_detected:
+        left_lm = None
+        right_lm = None
+        left_pos = None
+        right_pos = None
+        cfg.spray_mode = False
+        cfg.rainbow_mode = False
+
+        if book_start is None:
+            book_start = time.time()
         else:
-            if time.time() - phone_start >= PHONE_HOLD_TIME:
+            if time.time() - book_start >= BOOK_HOLD_TIME:
                 filename = f"screenshots/airpaint_{int(time.time())}.png"
                 output = cv2.add(frame, cfg.canvas)
                 cv2.imwrite(filename, output)
 
                 print("Screenshot salva:", filename)
-                phone_start = None
+                book_start = None
     else:
-        phone_start = None
+        book_start = None
 
     if right_up:
         if right_arm_start is None:
