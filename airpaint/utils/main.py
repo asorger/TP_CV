@@ -15,7 +15,7 @@ from hands import detect_hands
 from drawing import ensure_canvas, draw_brush, erase_at, spray_at, draw_palette, check_palette_selection
 from drawing import clear_canvas, undo
 from pose import detect_pose       
-from yolo_detector import detect_phone
+from yolo_detector import detect_book
 from face import detect_smile
 
 right_arm_start = None
@@ -42,7 +42,9 @@ while True:
         break
 
     frame = cv2.flip(frame, 1)
+    raw_frame = frame.copy()
     h, w, _ = frame.shape
+
     right_up, left_up = detect_pose(frame)
 
     ensure_canvas(h, w)
@@ -111,9 +113,16 @@ while True:
             else:
                 draw_brush(x, y)
 
-    phone_detected = detect_phone(frame)
+    book_detected = detect_book(raw_frame)
 
-    if phone_detected:
+    if book_detected:
+        left_lm = None
+        right_lm = None
+        left_pos = None
+        right_pos = None
+        cfg.spray_mode = False
+        cfg.rainbow_mode = False
+
         if phone_start is None:
             phone_start = time.time()
         else:
