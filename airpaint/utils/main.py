@@ -9,13 +9,20 @@ from gestures import (
     three_fingers,
     four_fingers,
     pinch,
-    is_fist
+    is_fist,
 )
 from hands import detect_hands
-from drawing import ensure_canvas, draw_brush, erase_at, spray_at, draw_palette, check_palette_selection
+from drawing import (
+    ensure_canvas,
+    draw_brush,
+    erase_at,
+    spray_at,
+    draw_palette,
+    check_palette_selection,
+)
 from drawing import clear_canvas, undo
-from pose import detect_pose       
-from yolo_detector import detect_book
+from pose import detect_pose
+from yolo_detector import detect_book, detect_can
 from face import detect_smile
 
 right_arm_start = None
@@ -136,6 +143,10 @@ while True:
     else:
         book_start = None
 
+    can_detected = detect_can(raw_frame)
+    if can_detected:
+        cfg.spray_mode = True
+
     if right_up:
         if right_arm_start is None:
             right_arm_start = time.time()
@@ -145,7 +156,7 @@ while True:
                 clear_canvas()
                 right_arm_start = None
     else:
-        right_arm_start = None 
+        right_arm_start = None
 
     if left_up:
         if left_arm_start is None:
@@ -162,7 +173,7 @@ while True:
 
     cv2.imshow("AirPaint 3D — Versao Modular", output)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
 cap.release()
