@@ -2,6 +2,8 @@ import cv2
 import time
 import os
 
+import mediapipe as mp
+
 import config as cfg
 from gestures import (
     one_finger,
@@ -41,6 +43,11 @@ BOOK_HOLD_TIME = 3
 if not os.path.exists("screenshots"):
     os.makedirs("screenshots")
 
+mp_draw = mp.solutions.drawing_utils
+mp_pose = mp.solutions.pose
+mp_hands = mp.solutions.hands
+mp_face_mesh = mp.solutions.face_mesh
+
 cap = cv2.VideoCapture(0)
 
 while True:
@@ -50,17 +57,24 @@ while True:
 
     frame = cv2.flip(frame, 1)
     raw_frame = frame.copy()
+    debug_frame = raw_frame.copy()
+
     h, w, _ = frame.shape
 
-    right_up, left_up = detect_pose(frame)
+    # POSE
+    right_up, left_up, pose_lms = detect_pose(frame)
 
     ensure_canvas(h, w)
 
-    frame, left_lm, right_lm, left_pos, right_pos = detect_hands(frame)
+    # MÃOS
+    frame, left_lm, right_lm, left_pos, right_pos, left_hand_obj, right_hand_obj = (
+        detect_hands(frame)
+    )
 
     draw_palette(frame)
 
-    smiling = detect_smile(frame)
+    # FACE / SMILE
+    smiling, face_lms = detect_smile(frame)
 
     if smiling:
         cfg.rainbow_mode = True
@@ -120,6 +134,7 @@ while True:
             else:
                 draw_brush(x, y)
 
+    # YOLO – LIVRO
     book_detected = detect_book(raw_frame)
 
     if book_detected:
@@ -143,9 +158,75 @@ while True:
     else:
         book_start = None
 
+    # YOLO – LATA
     can_detected = detect_can(raw_frame)
     if can_detected:
         cfg.spray_mode = True
+
+    # ========== DEBUG DRAW ==========
+
+    # Pose (esqueleto)
+    if pose_lms:
+        mp_draw.draw_landmarks(
+            debug_frame,
+            pose_lms,
+            mp_pose.POSE_CONNECTIONS,
+            mp_draw.DrawingSpec(color=(0, 255, 255), thickness=2, circle_radius=2),
+            mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2),
+        )
+
+    # Mãos
+    if left_hand_obj is not None:
+        mp_draw.draw_landmarks(
+            debug_frame,
+            left_hand_obj,
+            mp_hands.HAND_CONNECTIONS,
+            mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2),
+            mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2),
+        )
+
+    if right_hand_obj is not None:
+        mp_draw.draw_landmarks(
+            debug_frame,
+            right_hand_obj,
+            mp_hands.HAND_CONNECTIONS,
+            mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2),
+            mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2),
+        )
+
+    # Face mesh
+    if face_lms is not None:
+        mp_draw.draw_landmarks(
+            debug_frame,
+            face_lms,
+            mp_face_mesh.FACEMESH_TESSELATION,
+            mp_draw.DrawingSpec(color=(255, 0, 255), thickness=1, circle_radius=1),
+            mp_draw.DrawingSpec(color=(0, 255, 255), thickness=1),
+        )
+
+    # Texto debug – smile, book, can
+    if smiling:
+        cv2.putText(
+            debug_frame,
+            "SMILE",
+            (10, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 0, 255),
+            2,
+        )
+
+    if book_detected:
+        cv2.putText(
+            debug_frame, "BOOK", (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2
+        )
+
+    if can_detected:
+        cv2.putText(
+            debug_frame, "CAN", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
+        )
+
+    # ================================
 
     if right_up:
         if right_arm_start is None:
@@ -172,6 +253,7 @@ while True:
     output = cv2.add(frame, cfg.canvas)
 
     cv2.imshow("AirPaint 3D — Versao Modular", output)
+    cv2.imshow("Debug View", debug_frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break

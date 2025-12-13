@@ -2,13 +2,10 @@ import mediapipe as mp
 import cv2
 
 mp_hands = mp.solutions.hands
-mp_draw = mp.solutions.drawing_utils
-
 hands = mp_hands.Hands(
-    max_num_hands=2,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.6
+    max_num_hands=2, min_detection_confidence=0.7, min_tracking_confidence=0.6
 )
+
 
 def detect_hands(frame):
     h, w, _ = frame.shape
@@ -17,6 +14,8 @@ def detect_hands(frame):
 
     left_lm = None
     right_lm = None
+    left_hand_obj = None
+    right_hand_obj = None
     left_pos = None
     right_pos = None
 
@@ -30,23 +29,12 @@ def detect_hands(frame):
 
             if hand_label == "Left":
                 left_lm = lm
+                left_hand_obj = handLms
                 left_pos = (x, y)
-                mp_draw.draw_landmarks(
-                    frame,
-                    handLms,
-                    mp_hands.HAND_CONNECTIONS,
-                    mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=3),
-                    mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)
-                )
+
             else:
                 right_lm = lm
+                right_hand_obj = handLms
                 right_pos = (x, y)
-                mp_draw.draw_landmarks(
-                    frame,
-                    handLms,
-                    mp_hands.HAND_CONNECTIONS,
-                    mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=3),
-                    mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2)
-                )
 
-    return frame, left_lm, right_lm, left_pos, right_pos
+    return frame, left_lm, right_lm, left_pos, right_pos, left_hand_obj, right_hand_obj
