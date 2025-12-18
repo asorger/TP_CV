@@ -27,6 +27,9 @@ from pose import detect_pose
 from yolo_detector import detect_book, detect_can
 from face import detect_smile
 
+from tool_window import ToolWindow
+
+
 right_arm_start = None
 left_arm_start = None
 ARM_HOLD_TIME = 4
@@ -49,6 +52,10 @@ mp_hands = mp.solutions.hands
 mp_face_mesh = mp.solutions.face_mesh
 
 cap = cv2.VideoCapture(0)
+
+tool_window = ToolWindow()
+
+cfg.current_tool = "brush"
 
 while True:
     ok, frame = cap.read()
@@ -75,11 +82,7 @@ while True:
 
     # FACE / SMILE
     smiling, face_lms = detect_smile(frame)
-
-    if smiling:
-        cfg.rainbow_mode = True
-    else:
-        cfg.rainbow_mode = False
+    cfg.rainbow_mode = smiling
 
     if cfg.rainbow_mode:
         now = time.time()
@@ -111,8 +114,10 @@ while True:
 
         if pinch(left_lm):
             cfg.spray_mode = True
+            cfg.current_tool = "spray"
         else:
             cfg.spray_mode = False
+            cfg.current_tool = "brush"
 
         if three_fingers(left_lm):
             cfg.thickness = min(60, cfg.thickness + 1)
@@ -124,24 +129,21 @@ while True:
         x, y = right_pos
 
         if is_fist(left_lm) and four_fingers(right_lm):
+            cfg.current_tool = "eraser"
             erase_at(x, y)
 
         elif pinch(right_lm):
             cfg.save_state(cfg.canvas)
-
             if cfg.spray_mode:
                 spray_at(x, y)
             else:
                 draw_brush(x, y)
 
-    # YOLO – LIVRO
+    # YOLO – LIVRO (print)
     book_detected = detect_book(raw_frame)
-
     if book_detected:
-        left_lm = None
-        right_lm = None
-        left_pos = None
-        right_pos = None
+        left_lm = right_lm = None
+        left_pos = right_pos = None
         cfg.spray_mode = False
         cfg.rainbow_mode = False
 
@@ -150,22 +152,18 @@ while True:
         else:
             if time.time() - book_start >= BOOK_HOLD_TIME:
                 filename = f"screenshots/airpaint_{int(time.time())}.png"
-                output = cv2.add(frame, cfg.canvas)
-                cv2.imwrite(filename, output)
-
-                print("Screenshot salva:", filename)
+                cv2.imwrite(filename, cv2.add(frame, cfg.canvas))
                 book_start = None
     else:
         book_start = None
 
-    # YOLO – LATA
-    can_detected = detect_can(raw_frame)
-    if can_detected:
+    # YOLO – LATA (spray)
+    if detect_can(raw_frame):
         cfg.spray_mode = True
+        cfg.current_tool = "spray"
 
-    # ========== DEBUG DRAW ==========
+    # ================= DEBUG =================
 
-    # Pose (esqueleto)
     if pose_lms:
         mp_draw.draw_landmarks(
             debug_frame,
@@ -175,7 +173,6 @@ while True:
             mp_draw.DrawingSpec(color=(0, 0, 255), thickness=2),
         )
 
-    # Mãos
     if left_hand_obj is not None:
         mp_draw.draw_landmarks(
             debug_frame,
@@ -194,7 +191,6 @@ while True:
             mp_draw.DrawingSpec(color=(0, 255, 0), thickness=2),
         )
 
-    # Face mesh
     if face_lms is not None:
         mp_draw.draw_landmarks(
             debug_frame,
@@ -204,36 +200,11 @@ while True:
             mp_draw.DrawingSpec(color=(0, 255, 255), thickness=1),
         )
 
-    # Texto debug – smile, book, can
-    if smiling:
-        cv2.putText(
-            debug_frame,
-            "SMILE",
-            (10, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 0, 255),
-            2,
-        )
-
-    if book_detected:
-        cv2.putText(
-            debug_frame, "BOOK", (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2
-        )
-
-    if can_detected:
-        cv2.putText(
-            debug_frame, "CAN", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
-        )
-
-    # ================================
-
     if right_up:
         if right_arm_start is None:
             right_arm_start = time.time()
         else:
-            elapsed = time.time() - right_arm_start
-            if elapsed >= ARM_HOLD_TIME:
+            if time.time() - right_arm_start >= ARM_HOLD_TIME:
                 clear_canvas()
                 right_arm_start = None
     else:
@@ -243,8 +214,7 @@ while True:
         if left_arm_start is None:
             left_arm_start = time.time()
         else:
-            elapsed = time.time() - left_arm_start
-            if elapsed >= ARM_HOLD_TIME:
+            if time.time() - left_arm_start >= ARM_HOLD_TIME:
                 undo()
                 left_arm_start = None
     else:
@@ -252,8 +222,10 @@ while True:
 
     output = cv2.add(frame, cfg.canvas)
 
+    # JANELAS
     cv2.imshow("AirPaint 3D — Versao Modular", output)
     cv2.imshow("Debug View", debug_frame)
+    cv2.imshow("Tool Animation", tool_window.get_frame(cfg.current_tool))
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
